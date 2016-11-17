@@ -134,14 +134,13 @@ void scheduler_exec_task(scheduler_t *ces, int task_id)
  */
 void scheduler_run(scheduler_t *ces)
 {
+	printf("code goes here");
 	/* --- Local variables (define variables here) --- */
 
 	/* --- Set minor cycle period --- */
-	//ces->minor = 200;
-
+	ces->minor = 500;
 	/* --- Write your code here --- */
-	// scheduler_start(ces);
+	//scheduler_start(ces);
+	//scheduler_exec_task(*ces, 0);
 	// scheduler_exec_task(...);
-	// scheduler_exec_task(...);
-	// scheduler_wait_for_timer(ces);
 }

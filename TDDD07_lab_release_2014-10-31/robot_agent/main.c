@@ -33,7 +33,6 @@ int main()
 {
 	// Say hello!
 	printf("Hello world!\n");
-
 	// Initialization
 	// Load Configuration
 	config_load();
