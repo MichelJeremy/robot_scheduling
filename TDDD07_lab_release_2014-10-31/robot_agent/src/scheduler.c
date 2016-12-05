@@ -30,10 +30,10 @@
  */
 scheduler_t *scheduler_init(void)
 {
-	// Allocate memory for Scheduler structure
-	scheduler_t *ces = (scheduler_t *) malloc(sizeof(scheduler_t));
+  // Allocate memory for Scheduler structure
+  scheduler_t *ces = (scheduler_t *) malloc(sizeof(scheduler_t));
 
-	return ces;
+  return ces;
 }
 
 /**
@@ -43,8 +43,8 @@ scheduler_t *scheduler_init(void)
  */
 void scheduler_destroy(scheduler_t *ces)
 {
-	// Free memory
-	free(ces);
+  // Free memory
+  free(ces);
 }
 
 /**
@@ -54,9 +54,9 @@ void scheduler_destroy(scheduler_t *ces)
  */
 void scheduler_start(scheduler_t *ces)
 {
-	// Set timers
-	timelib_timer_set(&ces->tv_started);
-	timelib_timer_set(&ces->tv_cycle);
+  // Set timers
+  timelib_timer_set(&ces->tv_started);
+  timelib_timer_set(&ces->tv_cycle);
 }
 
 /**
@@ -66,20 +66,20 @@ void scheduler_start(scheduler_t *ces)
  */
 void scheduler_wait_for_timer(scheduler_t *ces)
 {
-	int sleep_time; // Sleep time in microseconds
+  int sleep_time; // Sleep time in microseconds
 
-	// Calculate time till end of the minor cycle
-	sleep_time = (ces->minor * 1000) - (int)(timelib_timer_get(ces->tv_cycle) * 1000);
+  // Calculate time till end of the minor cycle
+  sleep_time = (ces->minor * 1000) - (int)(timelib_timer_get(ces->tv_cycle) * 1000);
 
-	// Add minor cycle period to timer
-	timelib_timer_add_ms(&ces->tv_cycle, ces->minor);
+  // Add minor cycle period to timer
+  timelib_timer_add_ms(&ces->tv_cycle, ces->minor);
 
-	// Check for overrun and execute sleep only if there is no
-	if(sleep_time > 0)
-	{
-		// Go to sleep (multipy with 1000 to get miliseconds)
-		usleep(sleep_time);
-	}
+  // Check for overrun and execute sleep only if there is no
+  if(sleep_time > 0)
+    {
+      // Go to sleep (multipy with 1000 to get miliseconds)
+      usleep(sleep_time);
+    }
 }
 
 /**
@@ -90,114 +90,76 @@ void scheduler_wait_for_timer(scheduler_t *ces)
  */
 void scheduler_exec_task(scheduler_t *ces, int task_id)
 {
-	switch(task_id)
-	{
-	// Mission
-	case s_TASK_MISSION_ID :
-		task_mission();
-		break;
-	// Navigate
-	case s_TASK_NAVIGATE_ID :
-		task_navigate();
-		break;
-	// Control
-	case s_TASK_CONTROL_ID :
-		task_control();
-		break;
-	// Refine
-	case s_TASK_REFINE_ID :
-		task_refine();
-		break;
-	// Report
-	case s_TASK_REPORT_ID :
-		task_report();
-		break;
-	// Communicate
-	case s_TASK_COMMUNICATE_ID :
-		task_communicate();
-		break;
-	// Collision detection
-	case s_TASK_AVOID_ID :
-		task_avoid();
-		break;
-	// Other
-	default :
-		// Do nothing
-		break;
-	}
+  switch(task_id)
+    {
+      // Mission
+    case s_TASK_MISSION_ID :
+      task_mission();
+      break;
+      // Navigate
+    case s_TASK_NAVIGATE_ID :
+      task_navigate();
+      break;
+      // Control
+    case s_TASK_CONTROL_ID :
+      task_control();
+      break;
+      // Refine
+    case s_TASK_REFINE_ID :
+      task_refine();
+      break;
+      // Report
+    case s_TASK_REPORT_ID :
+      task_report();
+      break;
+      // Communicate
+    case s_TASK_COMMUNICATE_ID :
+      task_communicate();
+      break;
+      // Collision detection
+    case s_TASK_AVOID_ID :
+      task_avoid();
+      break;
+      // Other
+    default :
+      // Do nothing
+      break;
+    }
 }
 
 
-// void wait_for_go_ahead(void) {
-// 	while(1) {
-// 		scheduler_exec_task(ces, s_TASK_COMMUNICATE_ID);
-// 		// get go ahead value
-// 		// as soon as communicate go to 1
-// 		break;
-// 	}
-// }
 /**
  * Run scheduler
  * @param ces Pointer to scheduler structure
  * @return Void
  */
-void scheduler_run(scheduler_t *ces) {
-	/* --- Local variables (define variables here) --- */
+void scheduler_run(scheduler_t *ces)
+{
+  /* --- Local variables (define variables here) --- */
+
+  /* --- Set minor cycle period --- */
+  //ces->minor = ...;
 	static int MAJOR_CYCLE = 1000;
-	// UDP Packet
+	void *data; // Void pointer for data
+	int data_type; // Data type
+	int end = 0;
+  ces->minor = 100;
 	char udp_packet[g_config.udp_packet_size];
 	int udp_packet_len;
+
 	// Protocol
 	protocol_t packet;
-	/* --- Set minor cycle period --- */
-	ces->minor = 100;
 
-	/* --- Write your code here --- */
-	scheduler_start(ces);
-	//wait_for_go_ahead();
-
-	while(udp_receive(g_udps, udp_packet, &udp_packet_len) == s_OK)
-	{
-		// Decode packet
-		//printf("%s\n",udp_packet);
-		if(protocol_decode(&packet, udp_packet, udp_packet_len, g_config.robot_id, g_config.robot_team) == s_OK)
-		{
-			// Now decoding depends on the type of the packet
-			switch(packet.type)
-			{
-			// ACK
-			case s_PROTOCOL_TYPE_ACK :
-				// Do nothing
-				break;
-
-			//Massi: go_ahead packet
-			case s_PROTOCOL_TYPE_GO_AHEAD :
-			{
-				// Declare go ahead command
-				command_t go_ahead;
-				go_ahead.cmd = s_CMD_GO_AHEAD;
-				// Redirect to mission by adding it to the queue
-				queue_enqueue(g_queue_mission, &go_ahead, s_DATA_STRUCT_TYPE_CMD);
-
-				// Debuging stuff
-				printf("GO_AHEAD RECEIVED for robot %d team %d\n",packet.recv_id,packet.send_team);
-				// Calculate time from packet (ms and s)
-				int send_time_s = floor(packet.send_time / 1000);
-				int send_time_ms = packet.send_time % 1000;
-				int now = floor(((long long)timelib_unix_timestamp() % 60000) / 1000);
-				printf("GO_AHEAD_TIME: %d (%d)\n",send_time_s,now);
-				break;
-			}
-		}
-	}
-}
+  /* --- Write your code here --- */
+  scheduler_start(ces);
 
 	while(1) { // loops around
+			int now = floor(((long long)timelib_unix_timestamp() % 1000));
+			usleep((1375 - now) * 1000);
 		// synchronize with major cycle period (1 s)
 		for (int i = 0; i <= MAJOR_CYCLE; i += 100) {
 
-			printf("%s %d\n%s %d\n\n", "Value of timer: ", i, "Value of go_ahead", g_go_ahead);
-			if (i == 0) { // 0
+			if (i == 0) {
 				scheduler_exec_task(ces, s_TASK_COMMUNICATE_ID);
 				scheduler_exec_task(ces, s_TASK_NAVIGATE_ID);
 				scheduler_exec_task(ces, s_TASK_CONTROL_ID);
@@ -223,9 +185,5 @@ void scheduler_run(scheduler_t *ces) {
 			}
 			scheduler_wait_for_timer(ces);
 		}
-		g_go_ahead = 0;
 	}
-	//scheduler_start(ces);
-	//scheduler_exec_task(*ces, 0);
-	// scheduler_exec_task(...);
 }
